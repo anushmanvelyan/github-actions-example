@@ -1,0 +1,49 @@
+name: Spring Boot CI/CD with Docker on GitHub
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2️⃣ Setup Java
+      - name: Set up JDK 8
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+          cache: maven
+
+      # 3️⃣ Build & test with Maven
+      - name: Build with Maven
+        run: mvn clean install
+
+      # 4️⃣ Login to Docker Hub
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 5️⃣ Build Docker image
+      - name: Build Docker image
+        run: docker build -t javatechie/springboot-images-new:latest .
+
+      # 6️⃣ Push Docker image
+      - name: Push Docker image
+        run: docker push javatechie/springboot-images-new:latest
+
+      # 7️⃣ Run Docker container on GitHub runner
+      - name: Run container for testing
+        run: |
+          docker run -d -p 8080:8080 --name springboot-app javatechie/springboot-images-new:latest
+          docker ps
